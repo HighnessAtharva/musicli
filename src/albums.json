@@ -1,0 +1,33 @@
+{
+    "album_ratings": [
+        {
+            "artist": "Alexandra Savior",
+            "album": "The Archer",
+            "cover": "https://lastfm.freetls.fastly.net/i/u/300x300/2857592ca19c52cb062508f6bb5d9723.jpg",
+            "album_rating": 10,
+            "review": "Banger",
+            "time": "2023-04-18 17:06:48.977603",
+            "track_ratings": [
+                {
+                    "track": "Soft Currents",
+                    "track_rating": 1
+                },
+                {
+                    "track": "Saving Grace",
+                    "track_rating": 2
+                },
+                {
+                    "track": "Howl",
+                    "track_rating": 6
+                }
+            ]
+        }
+    ],
+    "song_ratings": [
+        {
+            "track": "But You",
+            "artist": "Alexandra Savior",
+            "track_rating": 2
+        }
+    ]
+}

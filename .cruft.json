@@ -1,0 +1,18 @@
+{
+  "template": "https://github.com/woltapp/wolt-python-package-cookiecutter",
+  "commit": "4eecc9c4d27e3c9321438bc1fdaf717bec5eadf6",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "author_name": "Atharva Shah",
+      "author_email": "highnessatharva@gmail.com",
+      "github_username": "HighnessAtharva",
+      "project_name": "musicli",
+      "project_slug": "musicli",
+      "package_name": "musicli",
+      "project_short_description": "Rate, review, and catalogue all your artists and albums from the command line",
+      "_template": "https://github.com/woltapp/wolt-python-package-cookiecutter"
+    }
+  },
+  "directory": null
+}
