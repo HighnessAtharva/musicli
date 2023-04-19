@@ -303,7 +303,7 @@ def see_albums_rated():
         table.add_row(artist, album, rating, time)
         
     print(table)
-        
+    return
 
 def see_songs_rated():
     load_or_create_json()
@@ -353,6 +353,7 @@ def see_songs_rated():
             table.add_row(artist, album, track_name, rating)
      
     print(table)
+    return
     
         
 def start():
@@ -373,4 +374,3 @@ def start():
     elif index == 4:
         exit()
 
-start()

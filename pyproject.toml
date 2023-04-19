@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "musicli"
-version = "0.0.6"
+version = "0.0.9"
 description = "Rate, review, and catalogue all your artists and albums from the command line"
 authors = [
     "Atharva Shah <highnessatharva@gmail.com>",
@@ -33,6 +33,7 @@ packages = [
 python = ">=3.7.1, <4.0"
 pylast = "^5.1.0"
 pick = "^2.2.0"
+rich = "^13.3.4"
 
 [tool.poetry.dev-dependencies]
 autoflake = "*"
