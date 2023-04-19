@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "musicli"
-version = "0.0.1"
+version = "0.0.6"
 description = "Rate, review, and catalogue all your artists and albums from the command line"
 authors = [
     "Atharva Shah <highnessatharva@gmail.com>",
@@ -31,6 +31,8 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.7.1, <4.0"
+pylast = "^5.1.0"
+pick = "^2.2.0"
 
 [tool.poetry.dev-dependencies]
 autoflake = "*"
@@ -55,6 +57,9 @@ pytest-cov = "*"
 python-kacl = "*"
 pyupgrade = "*"
 tryceratops = "*"
+
+[tool.poetry.scripts]
+musicli = "musicli.musicli:start"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

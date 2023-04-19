@@ -61,6 +61,28 @@ The documentation is automatically generated from the content of the [docs direc
 
 ### Releasing
 
+Publishing the package via poetry
+
+```sh
+# adding dependencies
+poetry add <new_dependency>
+
+# bumping the version
+poetry version <new_version>
+
+# installing the package
+poetry install
+
+# locking the dependencies [optional]
+poetry lock
+
+# building the package
+poetry build
+
+# publishing the package [token is already set initially]
+poetry publish
+```
+
 Trigger the [Draft release workflow](https://github.com/HighnessAtharva/musicli/actions/workflows/draft_release.yml)
 (press _Run workflow_). This will update the changelog & version and create a GitHub release which is in _Draft_ state.
 
