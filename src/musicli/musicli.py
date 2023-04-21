@@ -9,6 +9,12 @@ from pick import pick
 from rich import print
 from rich.table import Table
 
+import requests
+from io import BytesIO
+from PIL import Image, ImageDraw, ImageFont
+
+from tiermaker import image_generator
+
 def load_or_create_json() -> None:
     if os.path.exists("albums.json"):
         with open("albums.json") as f:
@@ -16,11 +22,11 @@ def load_or_create_json() -> None:
     else:
         # create a new json file with empty dict
         with open("albums.json", "w") as f:
-            ratings = {"album_ratings": [], "song_ratings": []}
+            ratings = {"album_ratings": [], "song_ratings": [], "tier_lists": []}
             json.dump(ratings, f)
 
 
-def get_album_list(artist: str, network: pylast.LastFMNetwork) -> List[str]:
+def get_album_list(artist: str) -> List[str]:
     # GET THE TOP ALBUMS OF THE ARTIST AND STORE THEM IN A LIST
     artist = network.get_artist(artist)
     top_albums = artist.get_top_albums()
@@ -39,7 +45,7 @@ def get_album_list(artist: str, network: pylast.LastFMNetwork) -> List[str]:
     return album_list
 
 
-def rate_by_album(network: pylast.LastFMNetwork) -> None:
+def rate_by_album() -> None:
     load_or_create_json()
     with open("albums.json") as f:
         album_file = json.load(f)
@@ -47,7 +53,7 @@ def rate_by_album(network: pylast.LastFMNetwork) -> None:
     artist_search = input("Search for an artist: ")
 
     try:
-        album_list = get_album_list(artist_search, network)
+        album_list = get_album_list(artist_search)
 
         # PICK THE ALBUMS
         print("Select albums to rate")
@@ -126,7 +132,7 @@ def rate_by_album(network: pylast.LastFMNetwork) -> None:
         print("Artist not found")
 
 
-def rate_album_songs(network: pylast.LastFMNetwork):
+def rate_album_songs():
     load_or_create_json()
     with open("albums.json") as f:
         album_file = json.load(f)
@@ -208,7 +214,7 @@ def rate_album_songs(network: pylast.LastFMNetwork):
             json.dump(album_file, f)
 
 
-def rate_single_song(network: pylast.LastFMNetwork):
+def rate_single_song():
     load_or_create_json()
     with open("albums.json") as f:
         album_file = json.load(f)
@@ -263,45 +269,45 @@ def rate_single_song(network: pylast.LastFMNetwork):
         json.dump(album_file, f)
 
 
-def rate_by_song(network: pylast.LastFMNetwork):
+def rate_by_song():
     question = "What do you want to do?"
     options = ["Rate All Songs From an Album", "Rate a Single Song"]
     selected_option, index = pick(options, question, indicator="→")
     if index == 0:
-        rate_album_songs(network)
+        rate_album_songs()
     elif index == 1:
-        rate_single_song(network)
+        rate_single_song()
 
 
 def see_albums_rated():
     load_or_create_json()
     with open("albums.json") as f:
         album_file = json.load(f)
-    
+
     # sort alphabetically
     album_file["album_ratings"].sort(key=lambda x: x["album"])
-     
+
     # add a rich table
     table = Table(title="Album Ratings")
     table.add_column("Artist", justify="left", style="cyan")
     table.add_column("Album", justify="left", style="cyan")
-    table.add_column("Rating", justify="left", style="cyan") 
+    table.add_column("Rating", justify="left", style="cyan")
     table.add_column("Time", justify="left", style="cyan")
-        
-        
+
+
     for collection in album_file["album_ratings"]:
         artist = collection["artist"]
         album = collection["album"]
         rating = str(collection["album_rating"])
-        
+
         # convert to human readable time
         time = collection["time"]
         time = time.split(" ")[0]
         time = datetime.strptime(time, "%Y-%m-%d").strftime("%b %d, %Y")
-        
+
         # add the row
         table.add_row(artist, album, rating, time)
-        
+
     print(table)
     return
 
@@ -309,41 +315,41 @@ def see_songs_rated():
     load_or_create_json()
     with open("albums.json") as f:
         album_file = json.load(f)
-    
+
     # SONGS - SINGLE SONGS
-    
+
     # sort alphabetically
     album_file["song_ratings"].sort(key=lambda x: x["track"])
-     
+
     # add a rich table
     table = Table(title="Song Ratings - Singles")
     table.add_column("Artist", justify="left", style="cyan")
     table.add_column("Song", justify="left", style="cyan")
-    table.add_column("Rating", justify="left", style="cyan") 
-    
-        
+    table.add_column("Rating", justify="left", style="cyan")
+
+
     for collection in album_file["song_ratings"]:
         artist = collection["artist"]
         song = collection["track"]
         rating = str(collection["track_rating"])
-        
+
         # add the row
         table.add_row(artist, song, rating)
-        
+
     print(table)
-    
+
     # SONGS - ALBUMS
-    
+
     # sort alphabetically
     album_file["album_ratings"].sort(key=lambda x: x["album"])
-     
+
     # add a rich table
     table = Table(title="Song Ratings - From Albums")
     table.add_column("Artist", justify="left", style="cyan")
     table.add_column("Album", justify="left", style="cyan")
     table.add_column("Track", justify="left", style="cyan")
     table.add_column("Rating", justify="left", style="cyan")
-     
+
     for collection in album_file["album_ratings"]:
         artist = collection["artist"]
         album = collection["album"]
@@ -351,26 +357,160 @@ def see_songs_rated():
         for track in collection["track_ratings"]:
             track_name = track["track"]
             table.add_row(artist, album, track_name, rating)
-     
+
     print(table)
     return
+
+
+def create_tier_list_helper(albums_to_rank, tier_name):
+    # if there are no more albums to rank, return an empty list
+    if not albums_to_rank:
+        return []
     
+    question = f"Select the albums you want to rank in  {tier_name}"
+    tier_picks = pick(options=albums_to_rank, title=question, multiselect=True, indicator="→", min_selection_count=0)
+    tier_picks = [x[0] for x in tier_picks]
+    
+    for album in tier_picks:
+        albums_to_rank.remove(album)
+
+    return tier_picks
+
+
+def get_album_cover(artist, album):
+    album = network.get_album(artist, album)
+    album_cover = album.get_cover_image()
+    return album_cover
+
+def create_tier_list():
+    load_or_create_json()
+    with open("albums.json") as f:
+        album_file = json.load(f)
+
+    print("TIERS - S, A, B, C, D, E")
+
+    question = "Which artist do you want to make a tier list for?"
+    artist = input(question).strip().lower()
+    
+    try:
+        get_artist = network.get_artist(artist)
+        artist = get_artist.get_name()
+        albums_to_rank = get_album_list(artist)
         
-def start():
-    LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
-    LASTFM_API_SECRET = os.environ.get("LASTFM_API_SECRET")
+        # keep only the album name by splitting the string at the first - and removing the first element
+        albums_to_rank = [x.split(" - ", 1)[1] for x in albums_to_rank[1:]]
+
+        question = "What do you want to call this tier list?"
+        tier_list_name = input(question).strip()
+
+        # S TIER
+        question = "Select the albums you want to rank in S Tier:"
+        s_tier_picks = create_tier_list_helper(albums_to_rank, "S Tier")
+        s_tier_covers = [get_album_cover(artist, album) for album in s_tier_picks]
+        s_tier = [{"album":album,"cover_art": cover} for album, cover in zip(s_tier_picks, s_tier_covers)]
+        
+        # A TIER
+        question = "Select the albums you want to rank in A Tier:"
+        a_tier_picks = create_tier_list_helper(albums_to_rank, "A Tier")
+        a_tier_covers = [get_album_cover(artist, album) for album in a_tier_picks]
+        a_tier = [{"album":album,"cover_art": cover} for album, cover in zip(a_tier_picks, a_tier_covers)]
+            
+        # B TIER
+        question = "Select the albums you want to rank in B Tier:"
+        b_tier_picks = create_tier_list_helper(albums_to_rank, "B Tier")
+        b_tier_covers = [get_album_cover(artist, album) for album in b_tier_picks]
+        b_tier = [{"album":album,"cover_art": cover} for album, cover in zip(b_tier_picks, b_tier_covers)]
+        
+        # C TIER
+        question = "Select the albums you want to rank in C Tier:"
+        c_tier_picks = create_tier_list_helper(albums_to_rank, "C Tier")
+        c_tier_covers = [get_album_cover(artist, album) for album in c_tier_picks]
+        c_tier = [{"album":album,"cover_art": cover} for album, cover in zip(c_tier_picks, c_tier_covers)]
+            
+        # D TIER
+        question = "Select the albums you want to rank in D Tier:"
+        d_tier_picks = create_tier_list_helper(albums_to_rank, "D Tier")
+        d_tier_covers = [get_album_cover(artist, album) for album in d_tier_picks] 
+        d_tier = [{"album":album,"cover_art": cover} for album, cover in zip(d_tier_picks, d_tier_covers)]
+            
+        
+        # E TIER
+        question = "Select the albums you want to rank in E Tier:"
+        e_tier_picks = create_tier_list_helper(albums_to_rank, "E Tier")
+        e_tier_covers = [get_album_cover(artist, album) for album in e_tier_picks]
+        e_tier = [{"album":album,"cover_art": cover} for album, cover in zip(e_tier_picks, e_tier_covers)]
+        
+        # check if all tiers are empty and if so, exit
+        if not any([s_tier_picks, a_tier_picks, b_tier_picks, c_tier_picks, d_tier_picks, e_tier_picks]):
+            print("All tiers are empty. Exiting...")
+            return
+        
+        
+        # # add the albums that were picked to the tier list
+        tier_list = {
+            "tier_list_name": tier_list_name,
+            "artist": artist,
+            "s_tier": s_tier, 
+            "a_tier": a_tier,
+            "b_tier": b_tier,
+            "c_tier": c_tier,
+            "d_tier": d_tier,
+            "e_tier": e_tier,
+            "time": str(datetime.now())
+        }
+        
+        # add the tier list to the json file
+        album_file["tier_lists"].append(tier_list)
+        
+        # save the json file
+        with open("albums.json", "w") as f:
+            json.dump(album_file, f, indent=4)
+            
+        return
+    
+    except pylast.PyLastError:
+        print("Artist not found")
+
+def see_tier_lists():
+    load_or_create_json()
+    with open("albums.json", "r") as f:
+        data = json.load(f)
+
+    if not data["tier_lists"]:
+        print("No tier lists created yet! Make one first!")
+        return
+    
+    for key in data["tier_lists"]:
+        image_generator(f"{key['tier_list_name']}.png", key)
+        print(f"Generated {key['tier_list_name']}.png")
+        
+    print("Done! Created all tier lists!")    
+
+
+LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
+LASTFM_API_SECRET = os.environ.get("LASTFM_API_SECRET")
+network = pylast.LastFMNetwork(api_key=LASTFM_API_KEY, api_secret=LASTFM_API_SECRET)
+
+def start():    
+    global network
+    
     startup_question = "What do you want to do?"
-    options = ["Rate by Album", "Rate Songs", "See Albums Rated", "See Songs Rated", "EXIT"]
+    options = ["Rate by Album", "Rate Songs", "See Albums Rated", "See Songs Rated", "Make a Tier List", "See Created Tier Lists", "EXIT"]
     selected_option, index = pick(options, startup_question, indicator="→")
-    network = pylast.LastFMNetwork(api_key=LASTFM_API_KEY, api_secret=LASTFM_API_SECRET)
+    
     if index == 0:
-        rate_by_album(network)
+        rate_by_album()
     elif index == 1:
-        rate_by_song(network)
+        rate_by_song()
     elif index == 2:
         see_albums_rated()
     elif index == 3:
         see_songs_rated()
     elif index == 4:
+        create_tier_list()
+    elif index == 5:
+        see_tier_lists()
+    elif index == 6:
         exit()
 
+start()

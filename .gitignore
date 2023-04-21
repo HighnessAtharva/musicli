@@ -79,3 +79,6 @@ venv.bak/
 .idea/
 albums.json
 src/albums.json
+
+# all pngs in src/musicli folder
+src/musicli/*.png
