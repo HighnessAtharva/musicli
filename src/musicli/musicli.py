@@ -1,19 +1,15 @@
 import json
 import os
 from datetime import datetime
+from io import BytesIO
 from typing import List
 
 import pylast
+import requests
 from pick import pick
-
+from PIL import Image, ImageDraw, ImageFont
 from rich import print
 from rich.table import Table
-
-import requests
-from io import BytesIO
-from PIL import Image, ImageDraw, ImageFont
-
-from tiermaker import image_generator
 
 def load_or_create_json() -> None:
     if os.path.exists("albums.json"):
@@ -380,6 +376,13 @@ def create_tier_list_helper(albums_to_rank, tier_name):
 def get_album_cover(artist, album):
     album = network.get_album(artist, album)
     album_cover = album.get_cover_image()
+    # check if it is a valid url
+    try:
+        response = requests.get(album_cover)
+        if response.status_code != 200:
+            album_cover = "https://i.imgur.com/7Qn1i4j.png"
+    except:
+        album_cover = "https://i.imgur.com/7Qn1i4j.png"
     return album_cover
 
 def create_tier_list():
@@ -402,6 +405,11 @@ def create_tier_list():
 
         question = "What do you want to call this tier list?"
         tier_list_name = input(question).strip()
+
+        # repeat until the user enters at least one character
+        while not tier_list_name:
+            print("Please enter at least one character")
+            tier_list_name = input(question).strip()
 
         # S TIER
         question = "Select the albums you want to rank in S Tier:"
@@ -432,8 +440,6 @@ def create_tier_list():
         d_tier_picks = create_tier_list_helper(albums_to_rank, "D Tier")
         d_tier_covers = [get_album_cover(artist, album) for album in d_tier_picks] 
         d_tier = [{"album":album,"cover_art": cover} for album, cover in zip(d_tier_picks, d_tier_covers)]
-            
-        
         # E TIER
         question = "Select the albums you want to rank in E Tier:"
         e_tier_picks = create_tier_list_helper(albums_to_rank, "E Tier")
@@ -471,10 +477,268 @@ def create_tier_list():
     except pylast.PyLastError:
         print("Artist not found")
 
+
+def image_generator(file_name, data):
+
+    # return if the file already exists
+    if os.path.exists(file_name):
+        return
+    
+    # Set the image size and font
+    image_width = 1920
+    image_height = 5000
+    font = ImageFont.truetype("arial.ttf", 15)
+    tier_font = ImageFont.truetype("arial.ttf", 30)
+    # Make a new image with the size and background color black
+    image = Image.new("RGB", (image_width, image_height), "black")
+    text_cutoff_value = 20
+
+    #Initialize variables for row and column positions
+    row_pos = 0
+    col_pos = 0
+    increment_size = 200
+    
+    """S Tier"""
+    # leftmost side - make a square with text inside the square and fill color
+    if col_pos == 0:
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="red")
+        draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "S Tier", font=tier_font, fill="white")
+        col_pos += increment_size
+        
+    for album in data["s_tier"]:
+        # Get the cover art
+        response = requests.get(album["cover_art"])
+        cover_art = Image.open(BytesIO(response.content))
+        # Resize the cover art
+        cover_art = cover_art.resize((increment_size, increment_size))
+        # Paste the cover art onto the base image
+        image.paste(cover_art, (col_pos, row_pos))
+        # Draw the album name on the image with the font size 10 and background color white
+        draw = ImageDraw.Draw(image)
+
+        # Get the album name
+        name = album["album"]
+        if len(name) > text_cutoff_value:
+            name = f"{name[:text_cutoff_value]}..."
+
+        draw.text((col_pos, row_pos + increment_size), name, font=font, fill="white")
+
+        # Increment the column position
+        col_pos += 200
+        # check if the column position is greater than the image width
+        if col_pos > image_width - increment_size:
+            # add a new row
+            row_pos += increment_size + 50
+            col_pos = 0 
+
+    # add a new row to separate the tiers
+    row_pos += increment_size + 50
+    col_pos = 0
+
+    """A TIER"""
+    # leftmost side - make a square with text inside the square and fill color
+    if col_pos == 0:
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="orange")
+        draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "A Tier", font=tier_font, fill="white")
+        col_pos += increment_size
+        
+    for album in data["a_tier"]:
+        # Get the cover art
+        response = requests.get(album["cover_art"])
+        cover_art = Image.open(BytesIO(response.content))
+        # Resize the cover art
+        cover_art = cover_art.resize((increment_size, increment_size))
+        # Paste the cover art onto the base image
+        image.paste(cover_art, (col_pos, row_pos))
+        # Draw the album name on the image with the font size 10 and background color white
+        draw = ImageDraw.Draw(image)
+
+        # Get the album name
+        name = album["album"]
+        if len(name) > text_cutoff_value:
+            name = f"{name[:text_cutoff_value]}..."
+
+        draw.text((col_pos, row_pos + increment_size), name, font=font, fill="white")
+
+        # Increment the column position
+        col_pos += 200
+        # check if the column position is greater than the image width
+        if col_pos > image_width - increment_size:
+            # add a new row
+            row_pos += increment_size + 50
+            col_pos = 0 
+
+    # add a new row to separate the tiers
+    row_pos += increment_size + 50
+    col_pos = 0
+    
+    """B TIER"""
+    # leftmost side - make a square with text inside the square and fill color
+    if col_pos == 0:
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="yellow")
+        draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "B Tier", font=tier_font, fill="black")
+        col_pos += increment_size
+        
+    for album in data["b_tier"]:
+        # Get the cover art
+        response = requests.get(album["cover_art"])
+        cover_art = Image.open(BytesIO(response.content))
+        # Resize the cover art
+        cover_art = cover_art.resize((increment_size, increment_size))
+        # Paste the cover art onto the base image
+        image.paste(cover_art, (col_pos, row_pos))
+        # Draw the album name on the image with the font size 10 and background color white
+        draw = ImageDraw.Draw(image)
+
+        # Get the album name
+        name = album["album"]
+        if len(name) > text_cutoff_value:
+            name = f"{name[:text_cutoff_value]}..."
+
+        draw.text((col_pos, row_pos + increment_size), name, font=font, fill="white")
+
+        # Increment the column position
+        col_pos += 200
+        # check if the column position is greater than the image width
+        if col_pos > image_width - increment_size:
+            # add a new row
+            row_pos += increment_size + 50
+            col_pos = 0
+    
+    # add a new row to separate the tiers
+    row_pos += increment_size + 50
+    col_pos = 0
+    
+    """C TIER"""
+        # leftmost side - make a square with text inside the square and fill color
+    if col_pos == 0:
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="green")
+        draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "C Tier", font=tier_font, fill="black")
+        col_pos += increment_size
+        
+    for album in data["c_tier"]:
+        # Get the cover art
+        response = requests.get(album["cover_art"])
+        cover_art = Image.open(BytesIO(response.content))
+        # Resize the cover art
+        cover_art = cover_art.resize((increment_size, increment_size))
+        # Paste the cover art onto the base image
+        image.paste(cover_art, (col_pos, row_pos))
+        # Draw the album name on the image with the font size 10 and background color white
+        draw = ImageDraw.Draw(image)
+
+        # Get the album name
+        name = album["album"]
+        if len(name) > text_cutoff_value:
+            name = f"{name[:text_cutoff_value]}..."
+
+        draw.text((col_pos, row_pos + increment_size), name, font=font, fill="white")
+
+        # Increment the column position
+        col_pos += 200
+        # check if the column position is greater than the image width
+        if col_pos > image_width - increment_size:
+            # add a new row
+            row_pos += increment_size + 50
+            col_pos = 0
+    
+    # add a new row to separate the tiers
+    row_pos += increment_size + 50
+    col_pos = 0
+   
+
+    """D TIER"""
+    # leftmost side - make a square with text inside the square and fill color
+    if col_pos == 0:
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="blue")
+        draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "D Tier", font=tier_font, fill="black")
+        col_pos += increment_size
+        
+    for album in data["d_tier"]:
+        # Get the cover art
+        response = requests.get(album["cover_art"])
+        cover_art = Image.open(BytesIO(response.content))
+        # Resize the cover art
+        cover_art = cover_art.resize((increment_size, increment_size))
+        # Paste the cover art onto the base image
+        image.paste(cover_art, (col_pos, row_pos))
+        # Draw the album name on the image with the font size 10 and background color white
+        draw = ImageDraw.Draw(image)
+
+        # Get the album name
+        name = album["album"]
+        if len(name) > text_cutoff_value:
+            name = f"{name[:text_cutoff_value]}..."
+
+        draw.text((col_pos, row_pos + increment_size), name, font=font, fill="white")
+
+        # Increment the column position
+        col_pos += 200
+        # check if the column position is greater than the image width
+        if col_pos > image_width - increment_size:
+            # add a new row
+            row_pos += increment_size + 50
+            col_pos = 0
+    
+    # add a new row to separate the tiers
+    row_pos += increment_size + 50
+    col_pos = 0
+
+
+    """E TIER"""
+        # leftmost side - make a square with text inside the square and fill color
+    if col_pos == 0:
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="pink")
+        draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "E Tier", font=tier_font, fill="black")
+        col_pos += increment_size
+        
+    for album in data["e_tier"]:
+        # Get the cover art
+        response = requests.get(album["cover_art"])
+        cover_art = Image.open(BytesIO(response.content))
+        # Resize the cover art
+        cover_art = cover_art.resize((increment_size, increment_size))
+        # Paste the cover art onto the base image
+        image.paste(cover_art, (col_pos, row_pos))
+        # Draw the album name on the image with the font size 10 and background color white
+        draw = ImageDraw.Draw(image)
+
+        # Get the album name
+        name = album["album"]
+        if len(name) > text_cutoff_value:
+            name = f"{name[:text_cutoff_value]}..."
+
+        draw.text((col_pos, row_pos + increment_size), name, font=font, fill="white")
+
+        # Increment the column position
+        col_pos += 200
+        # check if the column position is greater than the image width
+        if col_pos > image_width - increment_size:
+            # add a new row
+            row_pos += increment_size + 50
+            col_pos = 0
+    
+    # add a new row to separate the tiers
+    row_pos += increment_size + 50
+    col_pos = 0
+    
+    # crop the image to trim the extra space below the last row
+    image = image.crop((0, 0, image_width, row_pos))
+
+    # save the image two directories up
+    image.save(f"{file_name}")
+    
 def see_tier_lists():
     load_or_create_json()
     with open("albums.json", "r") as f:
         data = json.load(f)
+
 
     if not data["tier_lists"]:
         print("No tier lists created yet! Make one first!")
@@ -485,7 +749,7 @@ def see_tier_lists():
         print(f"Generated {key['tier_list_name']}.png")
         
     print("Done! Created all tier lists!")    
-
+    return
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
 LASTFM_API_SECRET = os.environ.get("LASTFM_API_SECRET")
