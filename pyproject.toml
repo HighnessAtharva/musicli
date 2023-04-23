@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "musicli"
-version = "0.0.12"
+version = "0.0.14"
 description = "Rate, review, and catalogue all your artists and albums from the command line"
 authors = [
     "Atharva Shah <highnessatharva@gmail.com>",

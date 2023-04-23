@@ -9,6 +9,7 @@ import requests
 from pick import pick
 from PIL import Image, ImageDraw, ImageFont
 from rich import print
+from rich.panel import Panel
 from rich.table import Table
 
 def load_or_create_json() -> None:
@@ -45,14 +46,14 @@ def rate_by_album() -> None:
     load_or_create_json()
     with open("albums.json") as f:
         album_file = json.load(f)
-    print("RATE BY ARTIST")
-    artist_search = input("Search for an artist: ")
+    print(Panel("[b green]Enter an artist to rate their albums[/b green]", title="[b magenta reverse]RATE BY ALBUM[/b magenta reverse]"))
+    artist_search = input()
 
     try:
         album_list = get_album_list(artist_search)
 
         # PICK THE ALBUMS
-        print("Select albums to rate")
+        print(Panel("[b green]Pick an album to rate[/b green]", title=f"[b magenta reverse]ALBUMS BY {artist_search.upper()}[/b magenta reverse]"))
         while True:
             selected_album, index = pick(album_list, "Albums", indicator="→")
             if selected_album == "EXIT":
@@ -94,9 +95,8 @@ def rate_by_album() -> None:
                         collection["review"] = review
 
                     album_found = True
-                    print(
-                        f"You updated {artist}'s {album} to {rating} stars | {index+1}/10 | REVIEW: {review}"
-                    )
+                    # add rich styling to this print statement
+                    print(f"🎶 You gave [b blue]{artist}'s {album}[/b blue] [i]{rating} stars[/i] | {index+1}/10 | REVIEW: {review}")
                     break
 
             # ! if the album is not found, get the cover art and add new entry to the json file
@@ -117,15 +117,13 @@ def rate_by_album() -> None:
                     }
                 )
 
-                print(
-                    f"You gave {artist}'s {album} {rating} stars | {index+1}/10 | REVIEW: {review}"
-                )
+                print(f"🎶 You gave [b blue]{artist}'s {album}[/b blue] [i]{rating} stars[/i] | {index+1}/10 | REVIEW: {review}")
 
         with open("albums.json", "w") as f:
             json.dump(album_file, f)
 
     except pylast.PyLastError:
-        print("Artist not found")
+        print("❌[b red] Artist not found [/b red]")
 
 
 def rate_album_songs():
@@ -133,6 +131,11 @@ def rate_album_songs():
     with open("albums.json") as f:
         album_file = json.load(f)
 
+    # check if there are any albums in the json file
+    if not len(album_file["album_ratings"]):
+        print("❌[b red] No albums found. Add some albums first.[/b red]")
+        return
+    
     # show all albums from the file
     albums_in_file = []
     for collection in album_file["album_ratings"]:
@@ -145,7 +148,7 @@ def rate_album_songs():
 
     # if there are no albums in the file based on the artist, exit
     if not len(albums_in_file):
-        print("No albums found")
+        print("❌[b red] No albums found. Add some albums first.[/b red]")
         return
 
     # pick an album to rate
@@ -189,7 +192,7 @@ def rate_album_songs():
                         track["track_rating"] = index + 1
                         track_found = True
                         print(
-                            f"You updated {artist}'s {selected_track} to {rating} stars | {index+1}/10"
+                            f"🎶 You updated [b blue]{artist}'s {selected_track}[/b blue] to [i]{rating} stars[/i] | {index+1}/10"
                         )
                         break
                 break
@@ -202,9 +205,7 @@ def rate_album_songs():
                     collection["track_ratings"].append(
                         {"track": selected_track, "track_rating": index + 1}
                     )
-                    print(
-                        f"You gave {artist}'s {selected_track} {rating} stars | {index+1}/10"
-                    )
+                    print(f"🎶 You gave [b blue]{artist}'s {selected_track}[/b blue] [i]{rating} stars[/i] | {index+1}/10")
                     break
         with open("albums.json", "w") as f:
             json.dump(album_file, f)
@@ -215,15 +216,17 @@ def rate_single_song():
     with open("albums.json") as f:
         album_file = json.load(f)
 
-    song_input = input("What's the name of the song?\t")
-    artist_input = input("What's the name of the artist?\t")
+    print("🎶 [b blue]What's the name of the song?[/b blue] \t")
+    song_input = input()
+    print("🎶 [b blue]What's the name of the artist?[/b blue] \t")
+    artist_input = input()
 
     # validate the song
     track = network.search_for_track(artist_input, song_input)
     results = track.get_next_page()
 
     if not results:
-        print("Song not found")
+        print("❌[b red] Song not found [/b red]")
         return
 
     song = results[0]
@@ -247,9 +250,7 @@ def rate_single_song():
         if collection["track"] == song.title:
             collection["track_rating"] = index + 1
             track_found = True
-            print(
-                f"You updated {song.artist.name}'s {song.title} to {rating} stars | {index+1}/10"
-            )
+            print(f"You updated [b blue]{song.artist.name}'s {song.title}[/b blue] to [i]{rating} stars[/i] | {index+1}/10")
             break
 
     # if the track is not found, add it to the json file
@@ -267,7 +268,7 @@ def rate_single_song():
 
 def rate_by_song():
     question = "What do you want to do?"
-    options = ["Rate All Songs From an Album", "Rate a Single Song"]
+    options = ["Rate Songs From an Album", "Rate a Single Song"]
     selected_option, index = pick(options, question, indicator="→")
     if index == 0:
         rate_album_songs()
@@ -280,15 +281,20 @@ def see_albums_rated():
     with open("albums.json") as f:
         album_file = json.load(f)
 
+    # check if there are any albums rated
+    if not album_file["album_ratings"]:
+        print("❌[b red] No albums rated yet [/b red]")
+        return
+
     # sort alphabetically
     album_file["album_ratings"].sort(key=lambda x: x["album"])
 
     # add a rich table
-    table = Table(title="Album Ratings")
+    table = Table(title="Album Ratings", show_header=True, header_style="bold magenta")
     table.add_column("Artist", justify="left", style="cyan")
     table.add_column("Album", justify="left", style="cyan")
     table.add_column("Rating", justify="left", style="cyan")
-    table.add_column("Time", justify="left", style="cyan")
+    table.add_column("Date", justify="left", style="cyan")
 
 
     for collection in album_file["album_ratings"]:
@@ -313,48 +319,58 @@ def see_songs_rated():
         album_file = json.load(f)
 
     # SONGS - SINGLE SONGS
+    # check if there are any songs rated as singles
+    if not album_file["song_ratings"]: 
+        print("❌ [b red] No songs rated as singles [/b red]")
+        
+    else:
+        # sort alphabetically
+        album_file["song_ratings"].sort(key=lambda x: x["track"])
 
-    # sort alphabetically
-    album_file["song_ratings"].sort(key=lambda x: x["track"])
-
-    # add a rich table
-    table = Table(title="Song Ratings - Singles")
-    table.add_column("Artist", justify="left", style="cyan")
-    table.add_column("Song", justify="left", style="cyan")
-    table.add_column("Rating", justify="left", style="cyan")
+        # add a rich table
+        table = Table(title="Song Ratings - Singles", show_header=True, header_style="bold magenta")
+        table.add_column("Artist", justify="left", style="cyan")
+        table.add_column("Song", justify="left", style="cyan")
+        table.add_column("Rating", justify="left", style="cyan")
 
 
-    for collection in album_file["song_ratings"]:
-        artist = collection["artist"]
-        song = collection["track"]
-        rating = str(collection["track_rating"])
+        for collection in album_file["song_ratings"]:
+            artist = collection["artist"]
+            song = collection["track"]
+            rating = str(collection["track_rating"])
 
-        # add the row
-        table.add_row(artist, song, rating)
+            # add the row
+            table.add_row(artist, song, rating)
 
-    print(table)
+        print(table)
 
+    print()
+    
     # SONGS - ALBUMS
+    # check if there are any songs rated as singles
+    if not album_file["album_ratings"]:
+        print("❌ [b red] No songs from albums rated yet [/b red]")
+        
+    else:
+        # sort alphabetically
+        album_file["album_ratings"].sort(key=lambda x: x["album"])
 
-    # sort alphabetically
-    album_file["album_ratings"].sort(key=lambda x: x["album"])
+        # add a rich table
+        table = Table(title="Song Ratings - From Albums", show_header=True, header_style="bold magenta")
+        table.add_column("Artist", justify="left", style="cyan")
+        table.add_column("Album", justify="left", style="cyan")
+        table.add_column("Track", justify="left", style="cyan")
+        table.add_column("Rating", justify="left", style="cyan")
 
-    # add a rich table
-    table = Table(title="Song Ratings - From Albums")
-    table.add_column("Artist", justify="left", style="cyan")
-    table.add_column("Album", justify="left", style="cyan")
-    table.add_column("Track", justify="left", style="cyan")
-    table.add_column("Rating", justify="left", style="cyan")
+        for collection in album_file["album_ratings"]:
+            artist = collection["artist"]
+            album = collection["album"]
+            for track in collection["track_ratings"]:
+                track_name = track["track"]
+                rating = str(track["track_rating"])
+                table.add_row(artist, album, track_name, rating)
 
-    for collection in album_file["album_ratings"]:
-        artist = collection["artist"]
-        album = collection["album"]
-        rating = str(collection["album_rating"])
-        for track in collection["track_ratings"]:
-            track_name = track["track"]
-            table.add_row(artist, album, track_name, rating)
-
-    print(table)
+        print(table)
     return
 
 
@@ -380,9 +396,9 @@ def get_album_cover(artist, album):
     try:
         response = requests.get(album_cover)
         if response.status_code != 200:
-            album_cover = "https://i.imgur.com/7Qn1i4j.png"
+            album_cover = "https://community.mp3tag.de/uploads/default/original/2X/a/acf3edeb055e7b77114f9e393d1edeeda37e50c9.png"
     except:
-        album_cover = "https://i.imgur.com/7Qn1i4j.png"
+        album_cover = "https://community.mp3tag.de/uploads/default/original/2X/a/acf3edeb055e7b77114f9e393d1edeeda37e50c9.png"
     return album_cover
 
 def create_tier_list():
@@ -475,7 +491,7 @@ def create_tier_list():
         return
     
     except pylast.PyLastError:
-        print("Artist not found")
+        print("❌[b red] Artist not found [/b red]")
 
 
 def image_generator(file_name, data):
@@ -739,16 +755,15 @@ def see_tier_lists():
     with open("albums.json", "r") as f:
         data = json.load(f)
 
-
     if not data["tier_lists"]:
-        print("No tier lists created yet! Make one first!")
+        print("❌ [b red]No tier lists have been created yet![/b red]")
         return
     
     for key in data["tier_lists"]:
         image_generator(f"{key['tier_list_name']}.png", key)
-        print(f"Generated {key['tier_list_name']}.png")
+        print(f"✅ [b green]CREATED[/b green] {key['tier_list_name']} tier list.")
         
-    print("Done! Created all tier lists!")    
+    print("✅ [b green]DONE[/b green]. Check the directory for the tier lists.")    
     return
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
@@ -757,8 +772,7 @@ network = pylast.LastFMNetwork(api_key=LASTFM_API_KEY, api_secret=LASTFM_API_SEC
 
 def start():    
     global network
-    
-    startup_question = "What do you want to do?"
+    startup_question = "What Do You Want To Do?"
     options = ["Rate by Album", "Rate Songs", "See Albums Rated", "See Songs Rated", "Make a Tier List", "See Created Tier Lists", "EXIT"]
     selected_option, index = pick(options, startup_question, indicator="→")
     
@@ -776,5 +790,3 @@ def start():
         see_tier_lists()
     elif index == 6:
         exit()
-
-start()
