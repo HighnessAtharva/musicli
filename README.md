@@ -8,6 +8,12 @@
 ---
 musicli is a powerful and user-friendly Python package that allows users to easily rate, review, and catalogue their favorite artists and albums from the command line. With intuitive search and selection features, users can quickly navigate their music library and rate each album on a 10-point scale. The package also offers the option to rate individual tracks and includes a variety of customization options to personalize the cataloguing experience. Whether you're a music aficionado or simply looking to organize your music library, musicli is the perfect tool for music lovers everywhere.
 
+## DEMO
+
+https://github.com/HighnessAtharva/musicli/assets/68660002/384b98d1-f7b6-4ea6-a7ad-680743a783b6
+
+
+
 **Documentation**: [https://HighnessAtharva.github.io/musicli](https://HighnessAtharva.github.io/musicli)
 
 **Source Code**: [https://github.com/HighnessAtharva/musicli](https://github.com/HighnessAtharva/musicli)
