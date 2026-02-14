@@ -13,49 +13,54 @@ from rich.panel import Panel
 from rich.table import Table
 
 def load_or_create_json() -> None:
+    """
+    Load the albums.json file if it exists, otherwise create it with an empty structure.
+    """
     if os.path.exists("albums.json"):
-        with open("albums.json") as f:
+        with open("albums.json", encoding="utf-8") as f:
             ratings = json.load(f)
     else:
-        # create a new json file with empty dict
-        with open("albums.json", "w") as f:
+        with open("albums.json", "w", encoding="utf-8") as f:
             ratings = {"album_ratings": [], "song_ratings": [], "tier_lists": []}
             json.dump(ratings, f)
 
 
 def get_album_list(artist: str) -> List[str]:
-    # GET THE TOP ALBUMS OF THE ARTIST AND STORE THEM IN A LIST
+    """
+    Get the top albums of the artist and return a cleaned, sorted list.
+    """
     artist = network.get_artist(artist)
     top_albums = artist.get_top_albums()
     album_list = [str(album.item) for album in top_albums]
-
-    # CLEANUP THE LIST
-    for album in album_list:
-        if "(null)" in album:
-            album_list.remove(album)
-
-    # SORT THE LIST
+    album_list = [album for album in album_list if "(null)" not in album]
     album_list.sort()
-
-    # ADD EXIT OPTION
+    # Show total count to user
+    print(Panel(f"[b cyan]Found {len(album_list)} albums for this artist.[/b cyan]", border_style="cyan"))
     album_list.insert(0, "EXIT")
     return album_list
 
 
 def rate_by_album() -> None:
     load_or_create_json()
-    with open("albums.json") as f:
+    with open("albums.json", encoding="utf-8") as f:
         album_file = json.load(f)
-    print(Panel("[b green]Enter an artist to rate their albums[/b green]", title="[b magenta reverse]RATE BY ALBUM[/b magenta reverse]"))
-    artist_search = input()
+    print(Panel("[b green]Enter an artist to rate their albums[/b green]", title="[b magenta reverse]RATE BY ALBUM[/b magenta reverse]", border_style="green"))
+    artist_search = input("[bold cyan]Artist name: [/bold cyan]")
 
     try:
         album_list = get_album_list(artist_search)
 
         # PICK THE ALBUMS
-        print(Panel("[b green]Pick an album to rate[/b green]", title=f"[b magenta reverse]ALBUMS BY {artist_search.upper()}[/b magenta reverse]"))
+        print(Panel(f"[b green]Pick an album to rate (Total: {len(album_list)-1})[/b green]", title=f"[b magenta reverse]ALBUMS BY {artist_search.upper()}[/b magenta reverse]", border_style="magenta"))
+        # Show all albums in a table for easier browsing
+        table = Table(title="Albums", show_header=True, header_style="bold magenta")
+        table.add_column("#", justify="right", style="cyan", width=4)
+        table.add_column("Album", justify="left", style="white")
+        for idx, album in enumerate(album_list[1:], 1):
+            table.add_row(str(idx), album)
+        print(table)
         while True:
-            selected_album, index = pick(album_list, "Albums", indicator="→")
+            selected_album, index = pick(album_list, "Albums (type to search, or select)", indicator="→")
             if selected_album == "EXIT":
                 break
 
@@ -80,7 +85,7 @@ def rate_by_album() -> None:
             review_question = f"Would you like to write a review for {album}?"
             review_options = ["Yes", "No"]
             review_choice, _ = pick(review_options, review_question, indicator="→")
-            review = input("Write your review: ") if review_choice == "Yes" else ""
+            review = input("[bold yellow]Write your review: [/bold yellow]") if review_choice == "Yes" else ""
 
             # ! check if the album is already in the json file by looping through the "album_ratings" list
             album_found = False
@@ -119,23 +124,23 @@ def rate_by_album() -> None:
 
                 print(f"🎶 You gave [b blue]{artist}'s {album}[/b blue] [i]{rating} stars[/i] | {index+1}/10 | REVIEW: {review}")
 
-        with open("albums.json", "w") as f:
+        with open("albums.json", "w", encoding="utf-8") as f:
             json.dump(album_file, f)
 
     except pylast.PyLastError:
-        print("❌[b red] Artist not found [/b red]")
+        print(Panel("❌ Artist not found", style="bold red", border_style="red"))
 
 
 def rate_album_songs():
     load_or_create_json()
-    with open("albums.json") as f:
+    with open("albums.json", encoding="utf-8") as f:
         album_file = json.load(f)
 
     # check if there are any albums in the json file
     if not len(album_file["album_ratings"]):
-        print("❌[b red] No albums found. Add some albums first.[/b red]")
+        print(Panel("❌ No albums found. Add some albums first.", style="bold red", border_style="red"))
         return
-    
+
     # show all albums from the file
     albums_in_file = []
     for collection in album_file["album_ratings"]:
@@ -148,7 +153,7 @@ def rate_album_songs():
 
     # if there are no albums in the file based on the artist, exit
     if not len(albums_in_file):
-        print("❌[b red] No albums found. Add some albums first.[/b red]")
+        print(Panel("❌ No albums found. Add some albums first.", style="bold red", border_style="red"))
         return
 
     # pick an album to rate
@@ -207,26 +212,26 @@ def rate_album_songs():
                     )
                     print(f"🎶 You gave [b blue]{artist}'s {selected_track}[/b blue] [i]{rating} stars[/i] | {index+1}/10")
                     break
-        with open("albums.json", "w") as f:
+        with open("albums.json", "w", encoding="utf-8") as f:
             json.dump(album_file, f)
 
 
 def rate_single_song():
     load_or_create_json()
-    with open("albums.json") as f:
+    with open("albums.json", encoding="utf-8") as f:
         album_file = json.load(f)
 
-    print("🎶 [b blue]What's the name of the song?[/b blue] \t")
-    song_input = input()
-    print("🎶 [b blue]What's the name of the artist?[/b blue] \t")
-    artist_input = input()
+    print(Panel("🎶 What's the name of the song?", style="bold blue", border_style="blue"))
+    song_input = input("[bold cyan]Song name: [/bold cyan]")
+    print(Panel("🎶 What's the name of the artist?", style="bold blue", border_style="blue"))
+    artist_input = input("[bold cyan]Artist name: [/bold cyan]")
 
     # validate the song
     track = network.search_for_track(artist_input, song_input)
     results = track.get_next_page()
 
     if not results:
-        print("❌[b red] Song not found [/b red]")
+        print(Panel("❌ Song not found", style="bold red", border_style="red"))
         return
 
     song = results[0]
@@ -262,7 +267,7 @@ def rate_single_song():
             f"You gave {song.artist.name}'s {song.title} {rating} stars | {index+1}/10"
         )
 
-    with open("albums.json", "w") as f:
+    with open("albums.json", "w", encoding="utf-8") as f:
         json.dump(album_file, f)
 
 
@@ -278,57 +283,55 @@ def rate_by_song():
 
 def see_albums_rated():
     load_or_create_json()
-    with open("albums.json") as f:
+    with open("albums.json", encoding="utf-8") as f:
         album_file = json.load(f)
 
     # check if there are any albums rated
     if not album_file["album_ratings"]:
-        print("❌[b red] No albums rated yet [/b red]")
+        print(Panel("❌ No albums rated yet", style="bold red", border_style="red"))
         return
 
     # sort alphabetically
     album_file["album_ratings"].sort(key=lambda x: x["album"])
 
-    # add a rich table
-    table = Table(title="Album Ratings", show_header=True, header_style="bold magenta")
+    from rich.console import Console
+    console = Console()
+    from rich import box
+    table = Table(title="Album Ratings", show_header=True, header_style="bold magenta", box=box.ASCII)
     table.add_column("Artist", justify="left", style="cyan")
     table.add_column("Album", justify="left", style="cyan")
     table.add_column("Rating", justify="left", style="cyan")
     table.add_column("Date", justify="left", style="cyan")
 
-
     for collection in album_file["album_ratings"]:
         artist = collection["artist"]
         album = collection["album"]
         rating = str(collection["album_rating"])
-
-        # convert to human readable time
         time = collection["time"]
         time = time.split(" ")[0]
         time = datetime.strptime(time, "%Y-%m-%d").strftime("%b %d, %Y")
-
-        # add the row
         table.add_row(artist, album, rating, time)
 
-    print(table)
+    console.print(table)
     return
 
 def see_songs_rated():
     load_or_create_json()
-    with open("albums.json") as f:
+    with open("albums.json", encoding="utf-8") as f:
         album_file = json.load(f)
 
     # SONGS - SINGLE SONGS
     # check if there are any songs rated as singles
-    if not album_file["song_ratings"]: 
-        print("❌ [b red] No songs rated as singles [/b red]")
-        
+    if not album_file["song_ratings"]:
+        print(Panel("❌ No songs rated as singles", style="bold red", border_style="red"))
+
     else:
         # sort alphabetically
         album_file["song_ratings"].sort(key=lambda x: x["track"])
 
         # add a rich table
-        table = Table(title="Song Ratings - Singles", show_header=True, header_style="bold magenta")
+        from rich import box
+        table = Table(title="Song Ratings - Singles", show_header=True, header_style="bold magenta", box=box.ASCII)
         table.add_column("Artist", justify="left", style="cyan")
         table.add_column("Song", justify="left", style="cyan")
         table.add_column("Rating", justify="left", style="cyan")
@@ -342,21 +345,24 @@ def see_songs_rated():
             # add the row
             table.add_row(artist, song, rating)
 
-        print(table)
+        from rich.console import Console
+        console = Console()
+        console.print(table)
 
     print()
-    
+
     # SONGS - ALBUMS
     # check if there are any songs rated as singles
     if not album_file["album_ratings"]:
-        print("❌ [b red] No songs from albums rated yet [/b red]")
-        
+        print(Panel("❌ No songs from albums rated yet", style="bold red", border_style="red"))
+
     else:
         # sort alphabetically
         album_file["album_ratings"].sort(key=lambda x: x["album"])
 
         # add a rich table
-        table = Table(title="Song Ratings - From Albums", show_header=True, header_style="bold magenta")
+        from rich import box
+        table = Table(title="Song Ratings - From Albums", show_header=True, header_style="bold magenta", box=box.ASCII)
         table.add_column("Artist", justify="left", style="cyan")
         table.add_column("Album", justify="left", style="cyan")
         table.add_column("Track", justify="left", style="cyan")
@@ -370,7 +376,9 @@ def see_songs_rated():
                 rating = str(track["track_rating"])
                 table.add_row(artist, album, track_name, rating)
 
-        print(table)
+        from rich.console import Console
+        console = Console()
+        console.print(table)
     return
 
 
@@ -378,11 +386,11 @@ def create_tier_list_helper(albums_to_rank, tier_name):
     # if there are no more albums to rank, return an empty list
     if not albums_to_rank:
         return []
-    
+
     question = f"Select the albums you want to rank in  {tier_name}"
     tier_picks = pick(options=albums_to_rank, title=question, multiselect=True, indicator="→", min_selection_count=0)
     tier_picks = [x[0] for x in tier_picks]
-    
+
     for album in tier_picks:
         albums_to_rank.remove(album)
 
@@ -403,76 +411,74 @@ def get_album_cover(artist, album):
 
 def create_tier_list():
     load_or_create_json()
-    with open("albums.json") as f:
+    with open("albums.json", encoding="utf-8") as f:
         album_file = json.load(f)
 
-    print("TIERS - S, A, B, C, D, E")
+    print(Panel("[b magenta]TIERS - S, A, B, C, D, E[/b magenta]", border_style="magenta"))
 
     question = "Which artist do you want to make a tier list for?"
-    artist = input(question).strip().lower()
-    
+    artist = input(f"[bold cyan]{question} [/bold cyan]").strip().lower()
+
     try:
         get_artist = network.get_artist(artist)
         artist = get_artist.get_name()
         albums_to_rank = get_album_list(artist)
-        
+
         # keep only the album name by splitting the string at the first - and removing the first element
         albums_to_rank = [x.split(" - ", 1)[1] for x in albums_to_rank[1:]]
 
         question = "What do you want to call this tier list?"
-        tier_list_name = input(question).strip()
-
-        # repeat until the user enters at least one character
+        tier_list_name = input(f"[bold cyan]{question} [/bold cyan]").strip()
         while not tier_list_name:
-            print("Please enter at least one character")
-            tier_list_name = input(question).strip()
+            print(Panel("Please enter at least one character", style="bold yellow", border_style="yellow"))
+            tier_list_name = input(f"[bold cyan]{question} [/bold cyan]").strip()
 
         # S TIER
         question = "Select the albums you want to rank in S Tier:"
         s_tier_picks = create_tier_list_helper(albums_to_rank, "S Tier")
         s_tier_covers = [get_album_cover(artist, album) for album in s_tier_picks]
         s_tier = [{"album":album,"cover_art": cover} for album, cover in zip(s_tier_picks, s_tier_covers)]
-        
+
         # A TIER
         question = "Select the albums you want to rank in A Tier:"
         a_tier_picks = create_tier_list_helper(albums_to_rank, "A Tier")
         a_tier_covers = [get_album_cover(artist, album) for album in a_tier_picks]
         a_tier = [{"album":album,"cover_art": cover} for album, cover in zip(a_tier_picks, a_tier_covers)]
-            
+
         # B TIER
         question = "Select the albums you want to rank in B Tier:"
         b_tier_picks = create_tier_list_helper(albums_to_rank, "B Tier")
         b_tier_covers = [get_album_cover(artist, album) for album in b_tier_picks]
         b_tier = [{"album":album,"cover_art": cover} for album, cover in zip(b_tier_picks, b_tier_covers)]
-        
+
         # C TIER
         question = "Select the albums you want to rank in C Tier:"
         c_tier_picks = create_tier_list_helper(albums_to_rank, "C Tier")
         c_tier_covers = [get_album_cover(artist, album) for album in c_tier_picks]
         c_tier = [{"album":album,"cover_art": cover} for album, cover in zip(c_tier_picks, c_tier_covers)]
-            
+
         # D TIER
         question = "Select the albums you want to rank in D Tier:"
         d_tier_picks = create_tier_list_helper(albums_to_rank, "D Tier")
-        d_tier_covers = [get_album_cover(artist, album) for album in d_tier_picks] 
+        d_tier_covers = [get_album_cover(artist, album) for album in d_tier_picks]
         d_tier = [{"album":album,"cover_art": cover} for album, cover in zip(d_tier_picks, d_tier_covers)]
         # E TIER
         question = "Select the albums you want to rank in E Tier:"
         e_tier_picks = create_tier_list_helper(albums_to_rank, "E Tier")
         e_tier_covers = [get_album_cover(artist, album) for album in e_tier_picks]
         e_tier = [{"album":album,"cover_art": cover} for album, cover in zip(e_tier_picks, e_tier_covers)]
-        
+
         # check if all tiers are empty and if so, exit
         if not any([s_tier_picks, a_tier_picks, b_tier_picks, c_tier_picks, d_tier_picks, e_tier_picks]):
-            print("All tiers are empty. Exiting...")
+            print(Panel("All tiers are empty. Exiting...", style="bold yellow", border_style="yellow"))
             return
-        
-        
+
+
         # # add the albums that were picked to the tier list
         tier_list = {
             "tier_list_name": tier_list_name,
             "artist": artist,
-            "s_tier": s_tier, 
+            "s_tier": s_tier,
             "a_tier": a_tier,
             "b_tier": b_tier,
             "c_tier": c_tier,
@@ -480,26 +486,33 @@ def create_tier_list():
             "e_tier": e_tier,
             "time": str(datetime.now())
         }
-        
+
         # add the tier list to the json file
         album_file["tier_lists"].append(tier_list)
-        
+
         # save the json file
-        with open("albums.json", "w") as f:
+        with open("albums.json", "w", encoding="utf-8") as f:
             json.dump(album_file, f, indent=4)
-            
+
         return
-    
+
     except pylast.PyLastError:
-        print("❌[b red] Artist not found [/b red]")
+        print(Panel("❌ Artist not found", style="bold red", border_style="red"))
 
 
 def image_generator(file_name, data):
 
-    # return if the file already exists
-    if os.path.exists(file_name):
+    """
+    Generate a tier list image and save it to the output directory.
+    """
+    # Ensure output directory exists
+    output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'output')
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, file_name)
+    # Return if the file already exists
+    if os.path.exists(output_path):
         return
-    
+
     # Set the image size and font
     image_width = 1920
     image_height = 5000
@@ -513,7 +526,7 @@ def image_generator(file_name, data):
     row_pos = 0
     col_pos = 0
     increment_size = 200
-    
+
     """S Tier"""
     # leftmost side - make a square with text inside the square and fill color
     if col_pos == 0:
@@ -521,7 +534,7 @@ def image_generator(file_name, data):
         draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="red")
         draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "S Tier", font=tier_font, fill="white")
         col_pos += increment_size
-        
+
     for album in data["s_tier"]:
         # Get the cover art
         response = requests.get(album["cover_art"])
@@ -546,7 +559,7 @@ def image_generator(file_name, data):
         if col_pos > image_width - increment_size:
             # add a new row
             row_pos += increment_size + 50
-            col_pos = 0 
+            col_pos = 0
 
     # add a new row to separate the tiers
     row_pos += increment_size + 50
@@ -559,7 +572,7 @@ def image_generator(file_name, data):
         draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="orange")
         draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "A Tier", font=tier_font, fill="white")
         col_pos += increment_size
-        
+
     for album in data["a_tier"]:
         # Get the cover art
         response = requests.get(album["cover_art"])
@@ -584,12 +597,12 @@ def image_generator(file_name, data):
         if col_pos > image_width - increment_size:
             # add a new row
             row_pos += increment_size + 50
-            col_pos = 0 
+            col_pos = 0
 
     # add a new row to separate the tiers
     row_pos += increment_size + 50
     col_pos = 0
-    
+
     """B TIER"""
     # leftmost side - make a square with text inside the square and fill color
     if col_pos == 0:
@@ -597,7 +610,7 @@ def image_generator(file_name, data):
         draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="yellow")
         draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "B Tier", font=tier_font, fill="black")
         col_pos += increment_size
-        
+
     for album in data["b_tier"]:
         # Get the cover art
         response = requests.get(album["cover_art"])
@@ -623,11 +636,11 @@ def image_generator(file_name, data):
             # add a new row
             row_pos += increment_size + 50
             col_pos = 0
-    
+
     # add a new row to separate the tiers
     row_pos += increment_size + 50
     col_pos = 0
-    
+
     """C TIER"""
         # leftmost side - make a square with text inside the square and fill color
     if col_pos == 0:
@@ -635,7 +648,7 @@ def image_generator(file_name, data):
         draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="green")
         draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "C Tier", font=tier_font, fill="black")
         col_pos += increment_size
-        
+
     for album in data["c_tier"]:
         # Get the cover art
         response = requests.get(album["cover_art"])
@@ -661,11 +674,11 @@ def image_generator(file_name, data):
             # add a new row
             row_pos += increment_size + 50
             col_pos = 0
-    
+
     # add a new row to separate the tiers
     row_pos += increment_size + 50
     col_pos = 0
-   
+
 
     """D TIER"""
     # leftmost side - make a square with text inside the square and fill color
@@ -674,7 +687,7 @@ def image_generator(file_name, data):
         draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="blue")
         draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "D Tier", font=tier_font, fill="black")
         col_pos += increment_size
-        
+
     for album in data["d_tier"]:
         # Get the cover art
         response = requests.get(album["cover_art"])
@@ -700,7 +713,7 @@ def image_generator(file_name, data):
             # add a new row
             row_pos += increment_size + 50
             col_pos = 0
-    
+
     # add a new row to separate the tiers
     row_pos += increment_size + 50
     col_pos = 0
@@ -713,7 +726,7 @@ def image_generator(file_name, data):
         draw.rectangle((col_pos, row_pos, col_pos + increment_size, row_pos + increment_size), fill="pink")
         draw.text((col_pos + (increment_size//3), row_pos+(increment_size//3)), "E Tier", font=tier_font, fill="black")
         col_pos += increment_size
-        
+
     for album in data["e_tier"]:
         # Get the cover art
         response = requests.get(album["cover_art"])
@@ -739,54 +752,119 @@ def image_generator(file_name, data):
             # add a new row
             row_pos += increment_size + 50
             col_pos = 0
-    
+
     # add a new row to separate the tiers
     row_pos += increment_size + 50
     col_pos = 0
-    
+
     # crop the image to trim the extra space below the last row
     image = image.crop((0, 0, image_width, row_pos))
 
-    # save the image two directories up
-    image.save(f"{file_name}")
-    
+    # Save the image in the output directory
+    image.save(output_path)
+
 def see_tier_lists():
     load_or_create_json()
-    with open("albums.json", "r") as f:
+    with open("albums.json", "r", encoding="utf-8") as f:
         data = json.load(f)
 
     if not data["tier_lists"]:
-        print("❌ [b red]No tier lists have been created yet![/b red]")
+        print(Panel("❌ No tier lists have been created yet!", style="bold red", border_style="red"))
         return
-    
+
+    output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'output')
+    os.makedirs(output_dir, exist_ok=True)
     for key in data["tier_lists"]:
         image_generator(f"{key['tier_list_name']}.png", key)
-        print(f"✅ [b green]CREATED[/b green] {key['tier_list_name']} tier list.")
-        
-    print("✅ [b green]DONE[/b green]. Check the directory for the tier lists.")    
+        print(f"✅ [b green]CREATED[/b green] {key['tier_list_name']} tier list in [b cyan]{output_dir}[/b cyan].")
+    print(f"✅ [b green]DONE[/b green]. Check the [b cyan]{output_dir}[/b cyan] directory for the tier lists.")
     return
 
 LASTFM_API_KEY = os.environ.get("LASTFM_API_KEY")
 LASTFM_API_SECRET = os.environ.get("LASTFM_API_SECRET")
 network = pylast.LastFMNetwork(api_key=LASTFM_API_KEY, api_secret=LASTFM_API_SECRET)
 
-def start():    
+def start():
+    """
+    Main entry point for the CLI. Shows a welcome banner and main menu.
+    Usage:
+      python -m musicli.musicli [--help]
+
+    Options:
+      --help    Show this help message and exit.
+
+    Features:
+      - Rate albums and songs by your favorite artists
+      - Create and visualize tier lists
+      - See all your ratings in beautiful tables
+      - All output is saved in the output/ directory
+      - Interactive, colorful terminal UI
+    """
+    import sys
     global network
-    startup_question = "What Do You Want To Do?"
-    options = ["Rate by Album", "Rate Songs", "See Albums Rated", "See Songs Rated", "Make a Tier List", "See Created Tier Lists", "EXIT"]
-    selected_option, index = pick(options, startup_question, indicator="→")
-    
-    if index == 0:
-        rate_by_album()
-    elif index == 1:
-        rate_by_song()
-    elif index == 2:
-        see_albums_rated()
-    elif index == 3:
-        see_songs_rated()
-    elif index == 4:
-        create_tier_list()
-    elif index == 5:
-        see_tier_lists()
-    elif index == 6:
-        exit()
+    if '--help' in sys.argv:
+        print(Panel("[b magenta]musicli CLI Help[/b magenta]\n\n" + start.__doc__, border_style="magenta"))
+        return
+    print(Panel("[b cyan]Welcome to musicli![/b cyan]", title="[b magenta]musicli[/b magenta]", border_style="cyan"))
+    while True:
+        startup_question = "What Do You Want To Do?"
+        options = [
+            "Rate by Album",
+            "Rate Songs",
+            "See Albums Rated",
+            "See Songs Rated",
+            "Make a Tier List",
+            "See Created Tier Lists",
+            "Show Tier List Images",
+            "Show Stats",
+            "EXIT"
+        ]
+        selected_option, index = pick(options, startup_question, indicator="→")
+        print(Panel("─" * 60, style="grey50"))
+        if index == 0:
+            rate_by_album()
+        elif index == 1:
+            rate_by_song()
+        elif index == 2:
+            see_albums_rated()
+        elif index == 3:
+            see_songs_rated()
+        elif index == 4:
+            create_tier_list()
+        elif index == 5:
+            see_tier_lists()
+        elif index == 6:
+            show_tier_list_images()
+        elif index == 7:
+            show_stats()
+        elif index == 8:
+            print(Panel("[b green]Thank you for using musicli! Goodbye![/b green]", border_style="green"))
+            break
+    def show_tier_list_images():
+        """
+        Show all tier list images in the output directory.
+        """
+        output_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'output')
+        images = [f for f in os.listdir(output_dir) if f.endswith('.png')]
+        if not images:
+            print(Panel("No tier list images found in output/", style="bold yellow", border_style="yellow"))
+            return
+        table = Table(title="Tier List Images", show_header=True, header_style="bold magenta")
+        table.add_column("Image File", style="cyan")
+        for img in images:
+            table.add_row(img)
+        print(table)
+        print(Panel(f"[b cyan]Images are saved in: {output_dir}[/b cyan]", border_style="cyan"))
+
+    def show_stats():
+        """
+        Show stats about albums, songs, and tier lists.
+        """
+        load_or_create_json()
+        with open("albums.json", encoding="utf-8") as f:
+            album_file = json.load(f)
+        album_count = len(album_file.get("album_ratings", []))
+        song_count = len(album_file.get("song_ratings", []))
+        tier_count = len(album_file.get("tier_lists", []))
+        print(Panel(f"[b magenta]Stats[/b magenta]\nAlbums rated: {album_count}\nSongs rated: {song_count}\nTier lists created: {tier_count}", border_style="magenta"))
+    start()
