@@ -1,7 +1,10 @@
-from pick import Picker, Option
-from musicli import musicli
+"""Legacy test: basic picker behaviour."""
 
-def test_move_up_down():
+from pick import Picker
+
+
+def test_move_up_down() -> None:
+    """Picker navigation still works correctly."""
     title = "Please choose an option: "
     options = ["option1", "option2", "option3"]
     picker = Picker(options, title)
@@ -10,4 +13,3 @@ def test_move_up_down():
     picker.move_down()
     picker.move_down()
     assert picker.get_selected() == ("option2", 1)
-    
