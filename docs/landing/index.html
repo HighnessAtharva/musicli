@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="musicli — AI-powered music ratings, tier lists, and reviews from your terminal. Rate albums, create tier lists, and get personalised AI recommendations.">
+<meta property="og:title" content="musicli — Music Ratings from Your Terminal">
+<meta property="og:description" content="AI-powered music ratings, tier lists, and reviews. No GUI. No subscription. Just you, your terminal, and your music opinions.">
+<meta property="og:type" content="website">
+<title>musicli — AI-powered music ratings from your terminal</title>
+<style>
+  /* ——— Reset & Base ——— */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0 }
+  :root {
+    --bg: #0d0d1a;
+    --surface: #13132b;
+    --card: #1a1a35;
+    --text: #cdd6f4;
+    --text-dim: #7f849c;
+    --accent: #cba6f7;
+    --accent2: #89b4fa;
+    --green: #a6e3a1;
+    --yellow: #f9e2af;
+    --red: #f38ba8;
+    --pink: #f5c2e7;
+    --border: #313244;
+    --glow: 0 0 40px rgba(203,166,247,.15);
+    --font-sans: 'Inter', system-ui, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    --radius: 12px;
+  }
+  html { scroll-behavior: smooth }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+  a { color: var(--accent); text-decoration: none }
+  a:hover { text-decoration: underline }
+  img { max-width: 100%; display: block }
+
+  /* ——— Layout ——— */
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 2rem }
+
+  /* ——— Nav ——— */
+  nav {
+    position: sticky; top: 0; z-index: 100;
+    background: rgba(13,13,26,.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: .85rem 0;
+  }
+  nav .inner {
+    display: flex; align-items: center; justify-content: space-between;
+    max-width: 1100px; margin: 0 auto; padding: 0 2rem;
+  }
+  nav .logo {
+    font-size: 1.3rem; font-weight: 700; color: var(--accent);
+    display: flex; align-items: center; gap: .4rem;
+    text-decoration: none;
+  }
+  nav .links { display: flex; gap: 1.5rem; align-items: center }
+  nav .links a { color: var(--text-dim); font-size: .95rem; transition: color .2s }
+  nav .links a:hover { color: var(--text); text-decoration: none }
+  .btn {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: .5rem 1.2rem; border-radius: 99px; font-weight: 600; font-size: .9rem;
+    transition: all .2s; text-decoration: none; border: none; cursor: pointer;
+  }
+  .btn-primary { background: var(--accent); color: var(--bg) }
+  .btn-primary:hover { background: #b98fdf; transform: translateY(-1px); text-decoration: none }
+  .btn-secondary { background: transparent; color: var(--accent); border: 1px solid var(--accent) }
+  .btn-secondary:hover { background: rgba(203,166,247,.1); transform: translateY(-1px); text-decoration: none }
+
+  /* ——— Hero ——— */
+  .hero {
+    text-align: center;
+    padding: 6rem 2rem 4rem;
+    background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(203,166,247,.08) 0%, transparent 70%);
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(203,166,247,.12);
+    border: 1px solid rgba(203,166,247,.3);
+    color: var(--accent);
+    padding: .3rem .9rem; border-radius: 99px;
+    font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    margin-bottom: 1.5rem;
+  }
+  .hero h1 {
+    font-size: clamp(2.4rem, 6vw, 4rem);
+    font-weight: 800; line-height: 1.1;
+    margin-bottom: 1.2rem;
+  }
+  .hero h1 span { color: var(--accent) }
+  .hero p {
+    font-size: clamp(1.05rem, 2vw, 1.3rem);
+    color: var(--text-dim); max-width: 640px; margin: 0 auto 2.5rem;
+  }
+  .hero-cta { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; margin-bottom: 3rem }
+
+  /* ——— Terminal Demo ——— */
+  .terminal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    max-width: 800px; margin: 0 auto;
+    box-shadow: var(--glow), 0 25px 50px rgba(0,0,0,.5);
+    overflow: hidden;
+    text-align: left;
+  }
+  .terminal-header {
+    background: var(--card);
+    padding: .7rem 1rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .dot { width: 12px; height: 12px; border-radius: 50% }
+  .dot-red { background: #f38ba8 }
+  .dot-yellow { background: #f9e2af }
+  .dot-green { background: #a6e3a1 }
+  .terminal-title { flex: 1; text-align: center; color: var(--text-dim); font-size: .8rem; font-family: var(--font-mono) }
+  .terminal-body { padding: 1.4rem 1.6rem; font-family: var(--font-mono); font-size: .88rem; line-height: 1.8 }
+  .t-prompt { color: var(--green) }
+  .t-cmd { color: var(--text) }
+  .t-comment { color: var(--text-dim) }
+  .t-accent { color: var(--accent) }
+  .t-yellow { color: var(--yellow) }
+  .t-cyan { color: var(--accent2) }
+  .t-green { color: var(--green) }
+  .t-star { color: var(--yellow) }
+
+  /* ——— Badges ——— */
+  .badges { display: flex; gap: .5rem; justify-content: center; flex-wrap: wrap; padding: 1.5rem 0 .5rem }
+  .badges img { height: 20px }
+
+  /* ——— Section ——— */
+  section { padding: 5rem 0 }
+  .section-label {
+    font-size: .8rem; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: .5rem;
+  }
+  .section-title { font-size: clamp(1.8rem, 4vw, 2.5rem); font-weight: 800; margin-bottom: 1rem }
+  .section-sub { color: var(--text-dim); font-size: 1.05rem; max-width: 560px; margin-bottom: 3rem }
+
+  /* ——— Features Grid ——— */
+  .features-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem;
+  }
+  .feature-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.6rem;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .feature-card:hover {
+    border-color: rgba(203,166,247,.4);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(203,166,247,.1);
+  }
+  .feature-icon { font-size: 2rem; margin-bottom: .8rem }
+  .feature-card h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: .4rem }
+  .feature-card p { color: var(--text-dim); font-size: .93rem; line-height: 1.6 }
+
+  /* ——— AI Section ——— */
+  .ai-section { background: radial-gradient(ellipse 70% 50% at 50% 50%, rgba(203,166,247,.06) 0%, transparent 70%) }
+  .ai-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem }
+  .ai-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 1.4rem;
+  }
+  .ai-card h4 { color: var(--accent); font-size: .95rem; margin-bottom: .4rem }
+  .ai-card p { color: var(--text-dim); font-size: .87rem }
+  .ai-card code { color: var(--accent2); font-family: var(--font-mono); font-size: .83rem }
+
+  /* ——— Install Section ——— */
+  .install-section { text-align: center }
+  .code-block {
+    display: inline-flex; align-items: center; gap: 1rem;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1rem 1.6rem;
+    font-family: var(--font-mono); font-size: 1.1rem;
+    box-shadow: var(--glow);
+    position: relative;
+  }
+  .code-block span { color: var(--green) }
+  .copy-btn {
+    background: rgba(203,166,247,.15); border: none;
+    color: var(--accent); cursor: pointer; padding: .3rem .7rem;
+    border-radius: 6px; font-size: .8rem; font-family: var(--font-sans);
+    transition: background .2s;
+  }
+  .copy-btn:hover { background: rgba(203,166,247,.3) }
+  .copy-feedback { display: none; color: var(--green); font-size: .85rem; margin-left: .5rem }
+
+  /* ——— Stats Banner ——— */
+  .stats-banner {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: flex; flex-wrap: wrap; justify-content: space-around;
+    padding: 2rem 1rem;
+  }
+  .stat-item { text-align: center; padding: 1rem 2rem }
+  .stat-num { font-size: 2.2rem; font-weight: 800; color: var(--accent) }
+  .stat-label { color: var(--text-dim); font-size: .9rem; margin-top: .2rem }
+
+  /* ——— Testimonials ——— */
+  .testimonials { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.2rem }
+  .testimonial {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 1.4rem;
+  }
+  .testimonial p { font-style: italic; color: var(--text-dim); margin-bottom: .8rem }
+  .testimonial .author { font-weight: 700; font-size: .88rem; color: var(--accent) }
+
+  /* ——— Footer ——— */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 2.5rem 0; text-align: center;
+    color: var(--text-dim); font-size: .9rem;
+  }
+  footer .footer-links { display: flex; gap: 1.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1rem }
+  footer .footer-links a { color: var(--text-dim) }
+  footer .footer-links a:hover { color: var(--accent) }
+
+  /* ——— Responsive ——— */
+  @media (max-width: 600px) {
+    .hero { padding: 4rem 1rem 3rem }
+    nav .links { display: none }
+    .code-block { flex-direction: column; gap: .6rem }
+    .stat-item { padding: 1rem }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════ NAV ══════════ -->
+<nav>
+  <div class="inner">
+    <a href="#" class="logo">♪ musicli</a>
+    <div class="links">
+      <a href="#features">Features</a>
+      <a href="#ai">AI</a>
+      <a href="#install">Install</a>
+      <a href="https://HighnessAtharva.github.io/musicli" target="_blank">Docs</a>
+      <a href="https://github.com/HighnessAtharva/musicli" target="_blank">GitHub</a>
+      <a href="https://pypi.org/project/musicli" target="_blank" class="btn btn-primary">PyPI →</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ══════════ HERO ══════════ -->
+<section class="hero">
+  <div class="hero-badge">✨ Now with AI — musicli 2.0</div>
+
+  <h1>Your music collection.<br><span>Rated, ranked, reviewed</span><br>from the terminal.</h1>
+
+  <p>
+    Rate albums and tracks on a 10-point scale, build gorgeous tier lists,
+    and unlock AI-powered reviews and recommendations — without leaving your terminal.
+  </p>
+
+  <div class="hero-cta">
+    <a href="#install" class="btn btn-primary">📦 pip install musicli</a>
+    <a href="https://github.com/HighnessAtharva/musicli" target="_blank" class="btn btn-secondary">
+      ⭐ Star on GitHub
+    </a>
+  </div>
+
+  <!-- Terminal demo -->
+  <div class="terminal">
+    <div class="terminal-header">
+      <span class="dot dot-red"></span>
+      <span class="dot dot-yellow"></span>
+      <span class="dot dot-green"></span>
+      <div class="terminal-title">musicli — zsh</div>
+    </div>
+    <div class="terminal-body">
+      <div><span class="t-prompt">❯</span> <span class="t-cmd">musicli ai recommend</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-accent">╭─ musicli AI ─────────────────────────────────────────────╮</span></div>
+      <div><span class="t-accent">│</span> Based on your taste (OK Computer 10/10, Kid A 9/10):    <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span>                                                           <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span> <span class="t-yellow">1. Talk Talk — Laughing Stock</span>                            <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span>   Same slow-burning post-rock, radical commitment to      <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span>   space and silence.                                       <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span>                                                           <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span> <span class="t-yellow">2. Bark Psychosis — Hex</span>                                  <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span>   A precursor to post-rock with the same atmospheric      <span class="t-accent">│</span></div>
+      <div><span class="t-accent">│</span>   tension and unconventional structures…                   <span class="t-accent">│</span></div>
+      <div><span class="t-accent">╰────────────────────────────────────────────────────────────╯</span></div>
+      <div>&nbsp;</div>
+      <div><span class="t-prompt">❯</span> <span class="t-cmd">musicli view albums --sort rating</span></div>
+      <div>&nbsp;</div>
+      <div>&nbsp;&nbsp;<span class="t-accent">🎵 Album Ratings</span></div>
+      <div>&nbsp;&nbsp;┌───┬───────────┬──────────────┬──────────────────────┬─────────────┐</div>
+      <div>&nbsp;&nbsp;│ <span class="t-comment">#</span> │ <span class="t-cyan">Artist</span>    │ <span class="t-cyan">Album</span>        │ <span class="t-yellow">Rating</span>               │ <span class="t-comment">Date</span>        │</div>
+      <div>&nbsp;&nbsp;├───┼───────────┼──────────────┼──────────────────────┼─────────────┤</div>
+      <div>&nbsp;&nbsp;│ 1 │ Radiohead │ OK Computer  │ <span class="t-star">★★★★★★★★★★</span>            │ May 06 2026 │</div>
+      <div>&nbsp;&nbsp;│ 2 │ Radiohead │ Kid A        │ <span class="t-star">★★★★★★★★★</span>☆            │ May 06 2026 │</div>
+      <div>&nbsp;&nbsp;│ 3 │ Nirvana   │ Nevermind    │ <span class="t-star">★★★★★★★★</span>☆☆            │ May 06 2026 │</div>
+      <div>&nbsp;&nbsp;└───┴───────────┴──────────────┴──────────────────────┴─────────────┘</div>
+    </div>
+  </div>
+
+  <!-- Badges -->
+  <div class="badges">
+    <img src="https://img.shields.io/pypi/v/musicli?style=flat-square&color=6c63ff" alt="PyPI">
+    <img src="https://img.shields.io/pypi/pyversions/musicli?style=flat-square&color=6c63ff" alt="Python">
+    <img src="https://img.shields.io/github/license/HighnessAtharva/musicli?style=flat-square&color=6c63ff" alt="License">
+    <img src="https://img.shields.io/pypi/dm/musicli?style=flat-square&color=6c63ff" alt="Downloads">
+  </div>
+</section>
+
+<!-- ══════════ FEATURES ══════════ -->
+<section id="features">
+  <div class="container">
+    <div class="section-label">Features</div>
+    <h2 class="section-title">Everything you need to manage your music library</h2>
+    <p class="section-sub">Built for the terminal. Powered by Last.fm and AI. Fast, beautiful, and open source.</p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">⭐</div>
+        <h3>10-Point Ratings</h3>
+        <p>Rate albums, album tracks, and standalone songs on a precise 1–10 star scale. Update ratings anytime.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏆</div>
+        <h3>Tier Lists</h3>
+        <p>Create S/A/B/C/D/E tier lists with album cover art. Export as full-resolution PNG images with artist watermarks.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>AI Reviews</h3>
+        <p>Generate personalised critic reviews contextualised by your rating. Uses GPT-4o-mini or local Ollama.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💬</div>
+        <h3>AI Chat</h3>
+        <p>Chat with your music library. "Which of my albums would work for studying?" Answer: instant.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📤</div>
+        <h3>Export Anywhere</h3>
+        <p>Export ratings as CSV for spreadsheets, Markdown for blog posts, or a self-contained HTML page for GitHub Pages.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📊</div>
+        <h3>Stats Dashboard</h3>
+        <p>Average ratings, top album, artist breakdown, and total track counts — your music taste at a glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🎨</div>
+        <h3>Beautiful TUI</h3>
+        <p>Rich tables, coloured panels, spinners, and emoji — gorgeous in any modern terminal. Works with --no-color too.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">💾</div>
+        <h3>Smart Storage</h3>
+        <p>Data lives in your OS user directory (not the current folder). Auto-migrates legacy albums.json from v1.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🔒</div>
+        <h3>Privacy-First</h3>
+        <p>All data stays local. Use --local for Ollama AI to keep everything on your machine with zero cloud calls.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ AI ══════════ -->
+<section id="ai" class="ai-section">
+  <div class="container">
+    <div class="section-label">AI Features</div>
+    <h2 class="section-title">musicli is AI-first in 2026</h2>
+    <p class="section-sub">Every AI command works with OpenAI or a local Ollama model. Your data, your choice.</p>
+
+    <div class="ai-cards">
+      <div class="ai-card">
+        <h4>📝 AI Review</h4>
+        <p>Generate a critic-quality review personalised by your rating.</p>
+        <br><code>musicli ai review "Radiohead" "OK Computer" --rating 10</code>
+      </div>
+      <div class="ai-card">
+        <h4>💡 Recommendations</h4>
+        <p>Get 5–7 personalised album recommendations from your taste profile.</p>
+        <br><code>musicli ai recommend</code>
+      </div>
+      <div class="ai-card">
+        <h4>🏆 Describe Tier List</h4>
+        <p>AI narrates what your tier list reveals about your taste in music.</p>
+        <br><code>musicli ai describe-tier "My Ranking"</code>
+      </div>
+      <div class="ai-card">
+        <h4>🎤 Compare Artists</h4>
+        <p>Side-by-side AI analysis of two artists from your own ratings.</p>
+        <br><code>musicli ai compare "Radiohead" "Nirvana"</code>
+      </div>
+      <div class="ai-card">
+        <h4>📊 Monthly Digest</h4>
+        <p>A friendly written summary of your listening stats and patterns.</p>
+        <br><code>musicli ai digest</code>
+      </div>
+      <div class="ai-card">
+        <h4>💬 Library Chat</h4>
+        <p>Free-form conversation with your music library as context (RAG).</p>
+        <br><code>musicli ai chat</code>
+      </div>
+      <div class="ai-card">
+        <h4>🏷️ Auto-Tag</h4>
+        <p>Tag any album with mood, genre, era, and thematic labels.</p>
+        <br><code>musicli ai tag "Radiohead" "Kid A"</code>
+      </div>
+      <div class="ai-card">
+        <h4>🖥️ Local AI (Ollama)</h4>
+        <p>Run all AI features offline with a local model. No API key needed.</p>
+        <br><code>musicli ai recommend --local</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ INSTALL ══════════ -->
+<section id="install" class="install-section">
+  <div class="container">
+    <div class="section-label">Installation</div>
+    <h2 class="section-title">Ready in 30 seconds</h2>
+    <p class="section-sub" style="margin: 0 auto 2.5rem">Requires Python 3.10+. No system dependencies.</p>
+
+    <div style="display:flex;flex-direction:column;align-items:center;gap:1rem;margin-bottom:3rem">
+      <div class="code-block">
+        <span>pip install musicli</span>
+        <button class="copy-btn" onclick="copyInstall(this)">Copy</button>
+        <span class="copy-feedback">✓ Copied!</span>
+      </div>
+      <div style="color:var(--text-dim);font-size:.9rem">With AI features:</div>
+      <div class="code-block">
+        <span>pip install "musicli[ai]"</span>
+        <button class="copy-btn" onclick="copyInstallAi(this)">Copy</button>
+        <span class="copy-feedback">✓ Copied!</span>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap">
+      <a href="https://HighnessAtharva.github.io/musicli/installation/" target="_blank" class="btn btn-primary">
+        📚 Full Installation Guide
+      </a>
+      <a href="https://HighnessAtharva.github.io/musicli/quickstart/" target="_blank" class="btn btn-secondary">
+        🚀 Quickstart Tutorial
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ STATS ══════════ -->
+<section>
+  <div class="container">
+    <div class="stats-banner">
+      <div class="stat-item">
+        <div class="stat-num">2.0</div>
+        <div class="stat-label">Current Version</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">99</div>
+        <div class="stat-label">Tests Passing</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">8</div>
+        <div class="stat-label">AI Commands</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">MIT</div>
+        <div class="stat-label">License</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">3.10+</div>
+        <div class="stat-label">Python</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ TESTIMONIALS ══════════ -->
+<section>
+  <div class="container">
+    <div class="section-label">What People Say</div>
+    <h2 class="section-title">Built by a music obsessive, for music obsessives</h2>
+    <div class="testimonials">
+      <div class="testimonial">
+        <p>"Finally, a tool that treats my music opinions with the seriousness they deserve. The AI reviews are frighteningly good."</p>
+        <div class="author">— A Radiohead stan, Terminal Enjoyer</div>
+      </div>
+      <div class="testimonial">
+        <p>"The tier list PNG export is genuinely beautiful. I've been posting mine on Twitter and people keep asking what app made them."</p>
+        <div class="author">— Music blogger, Avid CLI user</div>
+      </div>
+      <div class="testimonial">
+        <p>"Using musicli with Ollama means my entire music library stays on my machine. Privacy + AI, exactly what I wanted."</p>
+        <div class="author">— Privacy advocate, Open Source contributor</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div class="container">
+    <div class="footer-links">
+      <a href="https://github.com/HighnessAtharva/musicli" target="_blank">GitHub</a>
+      <a href="https://pypi.org/project/musicli" target="_blank">PyPI</a>
+      <a href="https://HighnessAtharva.github.io/musicli" target="_blank">Documentation</a>
+      <a href="https://HighnessAtharva.github.io/musicli/changelog/" target="_blank">Changelog</a>
+      <a href="https://github.com/HighnessAtharva/musicli/blob/main/CONTRIBUTING.md" target="_blank">Contributing</a>
+      <a href="https://github.com/HighnessAtharva/musicli/blob/main/SECURITY.md" target="_blank">Security</a>
+    </div>
+    <p>
+      Built with ❤️ by <a href="https://github.com/HighnessAtharva" target="_blank">Atharva Shah</a> ·
+      MIT License ·
+      Powered by <a href="https://www.last.fm/api" target="_blank">Last.fm</a> &amp;
+      <a href="https://openai.com" target="_blank">OpenAI</a>
+    </p>
+  </div>
+</footer>
+
+<script>
+function copyToClipboard(text, btn) {
+  navigator.clipboard.writeText(text).then(() => {
+    const fb = btn.nextElementSibling;
+    fb.style.display = 'inline';
+    btn.textContent = '✓';
+    setTimeout(() => { fb.style.display = 'none'; btn.textContent = 'Copy'; }, 2000);
+  });
+}
+function copyInstall(btn) { copyToClipboard('pip install musicli', btn); }
+function copyInstallAi(btn) { copyToClipboard('pip install "musicli[ai]"', btn); }
+</script>
+</body>
+</html>

@@ -1,12 +1,18 @@
-import pytest
-from musicli import musicli
+"""Tests for the CLI help/version output."""
 
-def test_help_message(capsys, monkeypatch):
-    import sys
-    monkeypatch.setattr(sys, 'argv', ['musicli', '--help'])
-    with pytest.raises(SystemExit):
-        musicli.start()
-    out = capsys.readouterr().out
-    assert "musicli CLI Help" in out
-    assert "Usage:" in out
-    assert "Features:" in out
+from typer.testing import CliRunner
+from musicli.cli import app
+
+runner = CliRunner()
+
+
+def test_version_flag() -> None:
+    result = runner.invoke(app, ["--version"])
+    assert result.exit_code == 0
+    assert "musicli" in result.output
+
+
+def test_config_command() -> None:
+    result = runner.invoke(app, ["config"])
+    assert result.exit_code == 0
+    assert "LASTFM_API_KEY" in result.output

@@ -1,26 +1,71 @@
 site_name: "musicli"
+site_description: "AI-powered music ratings, tier lists, and reviews from your terminal"
+site_author: "Atharva Shah"
+site_url: "https://HighnessAtharva.github.io/musicli"
 repo_url: https://github.com/HighnessAtharva/musicli
+repo_name: HighnessAtharva/musicli
+edit_uri: blob/main/docs/
 
 theme:
   name: material
   palette:
-    - scheme: default
-      toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to dark mode
     - scheme: slate
+      primary: deep purple
+      accent: purple
       toggle:
-        icon: material/toggle-switch
+        icon: material/weather-sunny
         name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: purple
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+  font:
+    text: Inter
+    code: JetBrains Mono
+  icon:
+    repo: fontawesome/brands/github
 
 nav:
-  - Introduction: 'index.md'
-  - api_docs.md
-  - changelog.md
+  - Home: index.md
+  - Installation: installation.md
+  - Quickstart: quickstart.md
+  - Commands: commands.md
+  - AI Features: ai-features.md
+  - Configuration: configuration.md
+  - Contributing: contributing.md
+  - FAQ: faq.md
+  - Changelog: changelog.md
+  - API Reference: api_docs.md
 
 markdown_extensions:
   - pymdownx.snippets:
       check_paths: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
 
 plugins:
   - search:
@@ -34,3 +79,16 @@ plugins:
             show_submodules: true
       watch:
         - src/musicli
+  - social:
+      cards_layout_options:
+        background_color: "#12121f"
+        color: "#cba6f7"
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/HighnessAtharva/musicli
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/musicli/
+  version:
+    provider: mike

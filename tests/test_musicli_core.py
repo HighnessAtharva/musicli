@@ -1,45 +1,50 @@
-import os
+"""Legacy core tests updated for new module structure."""
+
 import json
 import pytest
-from musicli import musicli
+from pathlib import Path
 
-def test_load_or_create_json(tmp_path, monkeypatch):
-    """Test that albums.json is created if missing and loads if present."""
-    test_file = tmp_path / "albums.json"
-    monkeypatch.chdir(tmp_path)
-    # Should create file if not exists
-    musicli.load_or_create_json()
-    assert test_file.exists()
-    with open(test_file) as f:
-        data = json.load(f)
-    assert "album_ratings" in data and "song_ratings" in data and "tier_lists" in data
-    # Should not overwrite if exists
+
+def test_load_or_create_json(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """load_db creates file if missing and loads if present."""
+    from musicli.storage import db as db_module
+
+    monkeypatch.setattr(db_module, "get_data_dir", lambda: tmp_path)
+    monkeypatch.setattr(db_module, "get_db_path", lambda: tmp_path / "albums.json")
+
+    from musicli.storage.db import load_db
+
+    data = load_db()
+    assert "album_ratings" in data
+    assert "song_ratings" in data
+    assert "tier_lists" in data
+
+    # Should not overwrite
     data["album_ratings"].append({"artist": "A", "album": "B"})
-    with open(test_file, "w") as f:
-        json.dump(data, f)
-    musicli.load_or_create_json()
-    with open(test_file) as f:
-        data2 = json.load(f)
+    from musicli.storage.db import save_db
+    save_db(data)
+    data2 = load_db()
     assert data2["album_ratings"] == data["album_ratings"]
 
-def test_get_album_list(monkeypatch):
-    class DummyArtist:
-        def get_top_albums(self):
-            class DummyAlbum:
-                def __init__(self, name):
-                    self.item = name
-            return [DummyAlbum("A - Album1"), DummyAlbum("A - Album2"), DummyAlbum("(null)")]
-    monkeypatch.setattr(musicli.network, "get_artist", lambda name: DummyArtist())
-    albums = musicli.get_album_list("A")
-    assert "EXIT" in albums
-    assert all("(null)" not in a for a in albums)
-    assert len(albums) == 3
 
-def test_image_generator(tmp_path, monkeypatch):
-    # Minimal test for image generation
-    file_name = "test_tier.png"
-    data = {tier: [] for tier in ["s_tier","a_tier","b_tier","c_tier","d_tier","e_tier"]}
-    data["s_tier"].append({"album": "Test", "cover_art": "https://community.mp3tag.de/uploads/default/original/2X/a/acf3edeb055e7b77114f9e393d1edeeda37e50c9.png"})
-    monkeypatch.chdir(tmp_path)
-    musicli.image_generator(file_name, data)
-    assert (tmp_path / "output" / file_name).exists()
+def test_get_album_list(mock_lastfm: object) -> None:
+    """get_artist_albums filters nulls and returns sorted list."""
+    from musicli.core.lastfm import get_artist_albums
+
+    albums = get_artist_albums("Radiohead")
+    assert all("(null)" not in a for a in albums)
+    assert albums == sorted(albums)
+
+
+def test_image_generator(tmp_path: Path, mock_http: None) -> None:
+    """image_generator creates a PNG file."""
+    from musicli.core.tier import image_generator
+
+    data = {
+        "artist": "Test",
+        "time": "2024-01-01",
+        "s_tier": [{"album": "Test Album", "cover_art": "https://example.com/img.png"}],
+        "a_tier": [], "b_tier": [], "c_tier": [], "d_tier": [], "e_tier": [],
+    }
+    result = image_generator("test_tier.png", data, output_dir=tmp_path)
+    assert result.exists()
