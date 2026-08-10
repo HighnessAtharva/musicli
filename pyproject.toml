@@ -34,7 +34,7 @@ packages = [
 
 [tool.poetry.dependencies]
 python = ">=3.10, <4.0"
-pylast = ">=5.3"
+pylast = ">=5.5.0"
 rich = ">=13.9"
 pillow = ">=11.0"
 typer = {version = ">=0.12", extras = ["all"]}
